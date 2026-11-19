@@ -87,7 +87,7 @@
       <button id="target" aria-label="Cíl"></button>
     </div>
 
-    <div id="message" aria-live="polite">Klikni na cíl. Kliknutí vedle odečte 2 body.</div>
+    <div id="message" aria-live="polite">Klikni na cíl. Kliknutí vedle odečte 2 body a cíl se přesune.</div>
     <button id="start">Začít hrát</button>
   </main>
 
@@ -138,7 +138,7 @@
       gameRunning = true;
       scoreText.textContent = score;
       timeText.textContent = timeLeft;
-      message.textContent = "Klikni na cíl. Kliknutí vedle odečte 2 body.";
+      message.textContent = "Klikni na cíl. Kliknutí vedle odečte 2 body a cíl se přesune.";
       startButton.style.display = "none";
       target.style.display = "block";
       moveTarget();
@@ -162,9 +162,10 @@
 
     board.addEventListener("click", (event) => {
       if (!gameRunning || event.target === target) return;
-      score = Math.max(0, score - 2);
+      score -= 2;
       scoreText.textContent = score;
-      message.textContent = "Vedle! Odečteny 2 body.";
+      message.textContent = "Vedle! Odečteny 2 body, cíl se přesunul.";
+      moveTarget();
     });
 
     startButton.addEventListener("click", startGame);
