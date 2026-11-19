@@ -24,6 +24,8 @@
       justify-content: space-between;
       margin-bottom: 12px;
       font-size: 22px;
+      gap: 12px;
+      flex-wrap: wrap;
     }
     #board {
       position: relative;
@@ -66,19 +68,26 @@
       transition: background 0.2s;
     }
     #start:hover { background: #16a34a; }
+    #message {
+      min-height: 24px;
+      margin-top: 12px;
+      color: #bfdbfe;
+    }
   </style>
 </head>
 <body>
   <main class="game">
     <div class="info">
       <span>Skóre: <strong id="score">0</strong></span>
+      <span>Nejlepší: <strong id="best">0</strong></span>
       <span>Čas: <strong id="time">30</strong> s</span>
     </div>
 
-    <div id="board">
+    <div id="board" aria-label="Hrací plocha">
       <button id="target" aria-label="Cíl"></button>
     </div>
 
+    <div id="message" aria-live="polite">Klikni na cíl. Kliknutí vedle odečte 2 body.</div>
     <button id="start">Začít hrát</button>
   </main>
 
@@ -87,11 +96,25 @@
     const target = document.getElementById("target");
     const startButton = document.getElementById("start");
     const scoreText = document.getElementById("score");
+    const bestText = document.getElementById("best");
     const timeText = document.getElementById("time");
+    const message = document.getElementById("message");
 
+    const BEST_SCORE_KEY = "reflexniHraNejlepsiSkore";
     let score = 0;
     let timeLeft = 30;
     let timer;
+    let gameRunning = false;
+    let bestScore = Number(localStorage.getItem(BEST_SCORE_KEY)) || 0;
+    bestText.textContent = bestScore;
+
+    function updateBestScore() {
+      if (score > bestScore) {
+        bestScore = score;
+        bestText.textContent = bestScore;
+        localStorage.setItem(BEST_SCORE_KEY, String(bestScore));
+      }
+    }
 
     function moveTarget() {
       const maxX = board.clientWidth - target.offsetWidth;
@@ -100,12 +123,22 @@
       target.style.top = Math.random() * maxY + "px";
     }
 
+    function finishGame() {
+      gameRunning = false;
+      clearInterval(timer);
+      target.style.display = "none";
+      startButton.textContent = "Hrát znovu";
+      startButton.style.display = "inline-block";
+      message.textContent = "Čas vypršel! Tvé skóre: " + score;
+    }
+
     function startGame() {
       score = 0;
       timeLeft = 30;
+      gameRunning = true;
       scoreText.textContent = score;
       timeText.textContent = timeLeft;
-
+      message.textContent = "Klikni na cíl. Kliknutí vedle odečte 2 body.";
       startButton.style.display = "none";
       target.style.display = "block";
       moveTarget();
@@ -114,21 +147,24 @@
       timer = setInterval(() => {
         timeLeft--;
         timeText.textContent = timeLeft;
-
-        if (timeLeft <= 0) {
-          clearInterval(timer);
-          target.style.display = "none";
-          startButton.textContent = "Hrát znovu";
-          startButton.style.display = "inline-block";
-          alert("Čas vypršel! Tvé skóre: " + score);
-        }
+        if (timeLeft <= 0) finishGame();
       }, 1000);
     }
 
-    target.addEventListener("click", () => {
+    target.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (!gameRunning) return;
       score++;
       scoreText.textContent = score;
+      updateBestScore();
       moveTarget();
+    });
+
+    board.addEventListener("click", (event) => {
+      if (!gameRunning || event.target === target) return;
+      score = Math.max(0, score - 2);
+      scoreText.textContent = score;
+      message.textContent = "Vedle! Odečteny 2 body.";
     });
 
     startButton.addEventListener("click", startGame);
