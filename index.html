@@ -6,690 +6,93 @@
   <title>Herní koutek</title>
   <style>
     * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      padding: 20px 0;
-      font-family: Arial, sans-serif;
-      background: linear-gradient(135deg, #111827, #1e3a8a);
-      color: white;
-    }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 20px 0; font-family: Arial, sans-serif; background: linear-gradient(135deg, #111827, #1e3a8a); color: white; }
     .game { width: min(800px, 92vw); text-align: center; }
     h1 { margin-top: 0; }
-    .info {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 12px;
-      font-size: 22px;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-    #board {
-      position: relative;
-      width: 100%;
-      height: 500px;
-      max-height: 70vh;
-      overflow: hidden;
-      border: 3px solid #60a5fa;
-      border-radius: 12px;
-      background: #1f2937;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-    }
-    #target {
-      position: absolute;
-      width: 54px;
-      height: 54px;
-      border-radius: 50%;
-      background: #ef4444;
-      box-shadow: 0 0 16px rgba(239, 68, 68, 0.8);
-      cursor: pointer;
-      display: none;
-    }
-    #target::after {
-      content: "";
-      position: absolute;
-      inset: 14px;
-      border-radius: 50%;
-      background: white;
-    }
-    .primary-button, .back-button {
-      margin: 12px 6px 0;
-      padding: 12px 24px;
-      border: 0;
-      border-radius: 8px;
-      color: white;
-      font-size: 18px;
-      cursor: pointer;
-    }
-    .primary-button { background: #22c55e; }
-    .primary-button:hover { background: #16a34a; }
-    .back-button { background: #475569; }
-    .back-button:hover { background: #334155; }
-    .game-choice {
-      display: inline-block;
-      width: min(340px, 100%);
-      margin: 10px;
-      padding: 24px;
-      border: 2px solid #60a5fa;
-      border-radius: 14px;
-      background: rgba(31, 41, 55, 0.9);
-      color: white;
-      text-align: left;
-      cursor: pointer;
-    }
-    .game-choice:hover { background: #263b5c; }
-    .game-choice strong { display: block; margin-bottom: 8px; font-size: 22px; }
-    #message {
-      min-height: 24px;
-      margin-top: 12px;
-      color: #bfdbfe;
-    }
-    .hidden { display: none !important; }
-    #memory-board {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(70px, 130px));
-      justify-content: center;
-      gap: 12px;
-      margin: 24px auto;
-    }
-    .memory-pad {
-      height: 115px;
-      border: 4px solid rgba(255, 255, 255, 0.35);
-      border-radius: 18px;
-      cursor: pointer;
-      opacity: 0.75;
-      transition: opacity 0.15s, transform 0.15s, filter 0.15s;
-      user-select: none;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .memory-pad:hover { opacity: 0.9; }
-    .memory-pad.active {
-      opacity: 1;
-      transform: scale(1.05);
-      filter: brightness(1.6);
-      box-shadow: 0 0 28px currentColor;
-    }
-    #pad-0 { background: #ef4444; color: #ef4444; }
-    #pad-1 { background: #22c55e; color: #22c55e; }
-    #pad-2 { background: #3b82f6; color: #3b82f6; }
-    #pad-3 { background: #eab308; color: #eab308; }
-    #pad-4 { background: #a855f7; color: #a855f7; }
-    #pad-5 { background: #f97316; color: #f97316; }
-    #pad-6 { background: #06b6d4; color: #06b6d4; }
-    #pad-7 { background: #ec4899; color: #ec4899; }
-    #mines-board {
-      display: grid;
-      grid-template-columns: repeat(8, minmax(0, 1fr));
-      gap: 4px;
-      width: min(440px, 100%);
-      margin: 18px auto;
-      padding: 8px;
-      border-radius: 12px;
-      background: #334155;
-    }
-    .mine-cell {
-      aspect-ratio: 1;
-      min-width: 0;
-      border: 0;
-      border-radius: 5px;
-      background: #94a3b8;
-      color: #111827;
-      font-size: clamp(14px, 4vw, 22px);
-      font-weight: bold;
-      cursor: pointer;
-    }
-    .mine-cell:hover:not(.revealed) { background: #cbd5e1; }
-    .mine-cell.revealed { background: #e2e8f0; cursor: default; }
-    .mine-cell.mine-hit { background: #ef4444; }
-    .mine-cell.flagged { background: #fbbf24; }
-    .mine-cell[data-number="1"] { color: #2563eb; }
-    .mine-cell[data-number="2"] { color: #16a34a; }
-    .mine-cell[data-number="3"] { color: #dc2626; }
-    .mine-cell[data-number="4"] { color: #7c3aed; }
-    #flag-toggle.active { background: #d97706; }
-    #equation {
-      margin: 35px 0 24px;
-      font-size: clamp(42px, 10vw, 72px);
-      font-weight: bold;
-    }
-    #answer-input {
-      width: min(220px, 60vw);
-      padding: 12px;
-      border: 2px solid #60a5fa;
-      border-radius: 8px;
-      font-size: 24px;
-      text-align: center;
-    }
-    @media (max-width: 480px) {
-      .info { justify-content: center; font-size: 18px; }
-      #memory-board { grid-template-columns: repeat(4, minmax(55px, 1fr)); gap: 8px; }
-      .memory-pad { height: 90px; border-radius: 13px; }
-      #mines-board { gap: 3px; padding: 5px; }
-    }
+    .info { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 22px; gap: 12px; flex-wrap: wrap; }
+    #board { position: relative; width: 100%; height: 500px; max-height: 70vh; overflow: hidden; border: 3px solid #60a5fa; border-radius: 12px; background: #1f2937; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
+    #target { position: absolute; width: 54px; height: 54px; border-radius: 50%; background: #ef4444; box-shadow: 0 0 16px rgba(239,68,68,.8); cursor: pointer; display: none; }
+    #target::after { content: ""; position: absolute; inset: 14px; border-radius: 50%; background: white; }
+    .primary-button,.back-button { margin: 12px 6px 0; padding: 12px 24px; border: 0; border-radius: 8px; color: white; font-size: 18px; cursor: pointer; }
+    .primary-button { background: #22c55e; } .primary-button:hover { background: #16a34a; }
+    .back-button { background: #475569; } .back-button:hover { background: #334155; }
+    .game-choice { display: inline-block; width: min(340px,100%); margin: 10px; padding: 24px; border: 2px solid #60a5fa; border-radius: 14px; background: rgba(31,41,55,.9); color: white; text-align: left; cursor: pointer; }
+    .game-choice:hover { background: #263b5c; } .game-choice strong { display: block; margin-bottom: 8px; font-size: 22px; }
+    #message { min-height: 24px; margin-top: 12px; color: #bfdbfe; } .hidden { display: none !important; }
+    #memory-board { display: grid; grid-template-columns: repeat(4,minmax(70px,130px)); justify-content: center; gap: 12px; margin: 24px auto; }
+    .memory-pad { height: 115px; border: 4px solid rgba(255,255,255,.35); border-radius: 18px; cursor: pointer; opacity: .75; transition: opacity .15s,transform .15s,filter .15s; user-select: none; -webkit-tap-highlight-color: transparent; }
+    .memory-pad:hover { opacity: .9; } .memory-pad.active { opacity: 1; transform: scale(1.05); filter: brightness(1.6); box-shadow: 0 0 28px currentColor; }
+    #pad-0 { background:#ef4444;color:#ef4444 } #pad-1 { background:#22c55e;color:#22c55e } #pad-2 { background:#3b82f6;color:#3b82f6 } #pad-3 { background:#eab308;color:#eab308 }
+    #pad-4 { background:#a855f7;color:#a855f7 } #pad-5 { background:#f97316;color:#f97316 } #pad-6 { background:#06b6d4;color:#06b6d4 } #pad-7 { background:#ec4899;color:#ec4899 }
+    #mines-board { display:grid; grid-template-columns:repeat(8,minmax(0,1fr)); gap:4px; width:min(440px,100%); margin:18px auto; padding:8px; border-radius:12px; background:#334155; }
+    .mine-cell { aspect-ratio:1; min-width:0; border:0; border-radius:5px; background:#94a3b8; color:#111827; font-size:clamp(14px,4vw,22px); font-weight:bold; cursor:pointer; }
+    .mine-cell:hover:not(.revealed) { background:#cbd5e1 } .mine-cell.revealed { background:#e2e8f0;cursor:default } .mine-cell.mine-hit { background:#ef4444 } .mine-cell.flagged { background:#fbbf24 }
+    .mine-cell[data-number="1"] { color:#2563eb } .mine-cell[data-number="2"] { color:#16a34a } .mine-cell[data-number="3"] { color:#dc2626 } .mine-cell[data-number="4"] { color:#7c3aed } #flag-toggle.active { background:#d97706 }
+    #equation { margin:35px 0 24px; font-size:clamp(36px,8vw,64px); font-weight:bold; }
+    #answer-input { width:min(220px,60vw); padding:12px; border:2px solid #60a5fa; border-radius:8px; font-size:24px; text-align:center; }
+    @media(max-width:480px) { .info { justify-content:center;font-size:18px } #memory-board { grid-template-columns:repeat(4,minmax(55px,1fr));gap:8px } .memory-pad { height:90px;border-radius:13px } #mines-board { gap:3px;padding:5px } }
   </style>
 </head>
 <body>
-  <main class="game">
-    <section id="menu">
-      <h1>Herní koutek</h1>
-      <p>Vyber si hru:</p>
-      <button class="game-choice" id="choose-reflex">
-        <strong>🎯 Reflexní terč</strong>
-        Klikni co nejrychleji na terč a nasbírej co nejvíc bodů za 30 sekund.
-      </button>
-      <button class="game-choice" id="choose-memory">
-        <strong>🧠 Barevná paměť</strong>
-        Zapamatuj si pořadí barev a zopakuj ho. Každé kolo přidá jednu barvu.
-      </button>
-      <button class="game-choice" id="choose-mines">
-        <strong>💣 Hledání min</strong>
-        Odkryj bezpečná políčka a označ miny. Pozor, jedna špatná volba a je konec!
-      </button>
-      <button class="game-choice" id="choose-math">
-        <strong>➗ Rychlé rovnice</strong>
-        Vyřeš co nejvíc příkladů za 60 sekund. Odpovědi můžeš zadávat klávesnicí.
-      </button>
-    </section>
-
-    <section id="reflex-game" class="hidden">
-      <h1>Reflexní terč</h1>
-      <div class="info">
-        <span>Skóre: <strong id="score">0</strong></span>
-        <span>Nejlepší: <strong id="best">0</strong></span>
-        <span>Čas: <strong id="time">30</strong> s</span>
-      </div>
-      <div id="board" aria-label="Hrací plocha"><div id="target" aria-hidden="true"></div></div>
-      <div id="message" aria-live="polite">Střed terče je za 2 body, okraj za 1 bod. Kliknutí vedle odečte 2 body.</div>
-      <button class="primary-button" id="start">Začít hrát</button>
-      <button class="back-button back-to-menu">← Výběr her</button>
-    </section>
-
-    <section id="memory-game" class="hidden">
-      <h1>Barevná paměť</h1>
-      <div class="info">
-        <span>Kolo: <strong id="round">0</strong></span>
-        <span>Rekord: <strong id="memory-best">0</strong></span>
-      </div>
-      <p id="memory-message" aria-live="polite">Zapamatuj si pořadí barev a zopakuj ho klikáním.</p>
-      <div id="memory-board" aria-label="Barevná hrací plocha">
-        <div class="memory-pad" id="pad-0" data-color="0" aria-label="Červená"></div>
-        <div class="memory-pad" id="pad-1" data-color="1" aria-label="Zelená"></div>
-        <div class="memory-pad" id="pad-2" data-color="2" aria-label="Modrá"></div>
-        <div class="memory-pad" id="pad-3" data-color="3" aria-label="Žlutá"></div>
-        <div class="memory-pad" id="pad-4" data-color="4" aria-label="Fialová"></div>
-        <div class="memory-pad" id="pad-5" data-color="5" aria-label="Oranžová"></div>
-        <div class="memory-pad" id="pad-6" data-color="6" aria-label="Tyrkysová"></div>
-        <div class="memory-pad" id="pad-7" data-color="7" aria-label="Růžová"></div>
-      </div>
-      <button class="primary-button" id="memory-start">Začít hru</button>
-      <button class="back-button back-to-menu">← Výběr her</button>
-    </section>
-
-    <section id="mines-game" class="hidden">
-      <h1>Hledání min</h1>
-      <div class="info">
-        <span>Miny: <strong id="mines-left">10</strong></span>
-        <span>Políčka: <strong id="safe-left">54</strong></span>
-      </div>
-      <p id="mines-message" aria-live="polite">Odkryj všechna bezpečná políčka. Číslo ukazuje počet min v okolí.</p>
-      <div id="mines-board" aria-label="Hrací plocha Hledání min"></div>
-      <button class="primary-button" id="flag-toggle" aria-pressed="false">🚩 Režim označování: vypnutý</button>
-      <button class="primary-button" id="mines-restart">Nová hra</button>
-      <button class="back-button back-to-menu">← Výběr her</button>
-    </section>
-
-    <section id="math-game" class="hidden">
-      <h1>Rychlé rovnice</h1>
-      <div class="info">
-        <span>Skóre: <strong id="math-score">0</strong></span>
-        <span>Rekord: <strong id="math-best">0</strong></span>
-        <span>Čas: <strong id="math-time">60</strong> s</span>
-      </div>
-      <p id="math-message" aria-live="polite">Správně vyřeš co nejvíc příkladů za 60 sekund.</p>
-      <div id="equation" aria-label="Příklad">Připrav se!</div>
-      <form id="answer-form">
-        <input id="answer-input" type="number" inputmode="numeric" autocomplete="off" aria-label="Odpověď" disabled required>
-        <button class="primary-button" id="math-submit" type="submit" disabled>Odpovědět</button>
-      </form>
-      <button class="primary-button" id="math-start">Začít hru</button>
-      <button class="back-button back-to-menu">← Výběr her</button>
-    </section>
-  </main>
-
-  <script>
-    const menu = document.getElementById("menu");
-    const reflexGame = document.getElementById("reflex-game");
-    const memoryGame = document.getElementById("memory-game");
-    const minesGame = document.getElementById("mines-game");
-    const mathGame = document.getElementById("math-game");
-    const board = document.getElementById("board");
-    const target = document.getElementById("target");
-    const startButton = document.getElementById("start");
-    const scoreText = document.getElementById("score");
-    const bestText = document.getElementById("best");
-    const timeText = document.getElementById("time");
-    const message = document.getElementById("message");
-    const BEST_SCORE_KEY = "reflexniHraNejlepsiSkore";
-    const MEMORY_BEST_KEY = "barevnaPametNejlepsiKolo";
-    let score = 0;
-    let timeLeft = 30;
-    let timer;
-    let gameRunning = false;
-    let bestScore = Number(localStorage.getItem(BEST_SCORE_KEY)) || 0;
-    bestText.textContent = bestScore;
-
-    function showGame(which) {
-      menu.classList.add("hidden");
-      reflexGame.classList.toggle("hidden", which !== "reflex");
-      memoryGame.classList.toggle("hidden", which !== "memory");
-      minesGame.classList.toggle("hidden", which !== "mines");
-      mathGame.classList.toggle("hidden", which !== "math");
-      if (which === "mines") startMinesGame();
-    }
-
-    function returnToMenu() {
-      gameRunning = false;
-      clearInterval(timer);
-      stopMemoryGame();
-      target.style.display = "none";
-      stopMinesGame();
-      stopMathGame();
-      menu.classList.remove("hidden");
-      reflexGame.classList.add("hidden");
-      memoryGame.classList.add("hidden");
-      minesGame.classList.add("hidden");
-      mathGame.classList.add("hidden");
-    }
-
-    function updateBestScore() {
-      if (score > bestScore) {
-        bestScore = score;
-        bestText.textContent = bestScore;
-        localStorage.setItem(BEST_SCORE_KEY, String(bestScore));
-      }
-    }
-
-    function moveTarget() {
-      const maxX = board.clientWidth - target.offsetWidth;
-      const maxY = board.clientHeight - target.offsetHeight;
-      const oldX = parseFloat(target.style.left) || 0;
-      const oldY = parseFloat(target.style.top) || 0;
-      let x, y, attempts = 0;
-      do {
-        x = Math.random() * maxX;
-        y = Math.random() * maxY;
-        attempts++;
-      } while (attempts < 10 && Math.hypot(x - oldX, y - oldY) < target.offsetWidth * 2);
-      target.style.left = x + "px";
-      target.style.top = y + "px";
-    }
-
-    function finishGame() {
-      gameRunning = false;
-      clearInterval(timer);
-      target.style.display = "none";
-      startButton.textContent = "Hrát znovu";
-      startButton.style.display = "inline-block";
-      message.textContent = "Čas vypršel! Tvé skóre: " + score;
-    }
-
-    function startGame() {
-      score = 0;
-      timeLeft = 30;
-      gameRunning = true;
-      scoreText.textContent = score;
-      timeText.textContent = timeLeft;
-      message.textContent = "Střed terče je za 2 body, okraj za 1 bod. Kliknutí vedle odečte 2 body.";
-      startButton.style.display = "none";
-      target.style.display = "block";
-      moveTarget();
-      clearInterval(timer);
-      timer = setInterval(() => {
-        timeLeft--;
-        timeText.textContent = timeLeft;
-        if (timeLeft <= 0) finishGame();
-      }, 1000);
-    }
-
-    target.addEventListener("click", (event) => {
-      if (!gameRunning) return;
-      const bounds = target.getBoundingClientRect();
-      const distance = Math.hypot(event.clientX - (bounds.left + bounds.width / 2), event.clientY - (bounds.top + bounds.height / 2));
-      const hitCenter = distance <= 13;
-      score += hitCenter ? 2 : 1;
-      scoreText.textContent = score;
-      message.textContent = hitCenter ? "Zásah do středu! +2 body" : "Zásah na okraj! +1 bod";
-      updateBestScore();
-      moveTarget();
-    });
-
-    board.addEventListener("click", (event) => {
-      if (!gameRunning || event.target === target) return;
-      score -= 2;
-      scoreText.textContent = score;
-      message.textContent = "Vedle! Odečteny 2 body, cíl se přesunul.";
-      moveTarget();
-    });
-
-    const memoryPads = [...document.querySelectorAll(".memory-pad")];
-    const memoryMessage = document.getElementById("memory-message");
-    const roundText = document.getElementById("round");
-    const memoryBestText = document.getElementById("memory-best");
-    const memoryStartButton = document.getElementById("memory-start");
-    let sequence = [];
-    let playerStep = 0;
-    let memoryRound = 0;
-    let acceptingInput = false;
-    let memoryTimers = [];
-    let memoryBest = Number(localStorage.getItem(MEMORY_BEST_KEY)) || 0;
-    memoryBestText.textContent = memoryBest;
-
-    function stopMemoryGame() {
-      memoryTimers.forEach(clearTimeout);
-      memoryTimers = [];
-      acceptingInput = false;
-      memoryPads.forEach((pad) => pad.classList.remove("active"));
-    }
-
-    function flashPad(color, duration = 450) {
-      const pad = memoryPads[color];
-      pad.classList.add("active");
-      const timerId = setTimeout(() => pad.classList.remove("active"), duration);
-      memoryTimers.push(timerId);
-    }
-
-    function startMemoryGame() {
-      stopMemoryGame();
-      sequence = [];
-      playerStep = 0;
-      memoryRound = 0;
-      roundText.textContent = "0";
-      memoryStartButton.style.display = "none";
-      nextMemoryRound();
-    }
-
-    function nextMemoryRound() {
-      acceptingInput = false;
-      memoryRound++;
-      roundText.textContent = String(memoryRound);
-      sequence.push(Math.floor(Math.random() * memoryPads.length));
-      memoryMessage.textContent = "Pozor! Zapamatuj si pořadí…";
-      sequence.forEach((color, index) => {
-        memoryTimers.push(setTimeout(() => flashPad(color), 550 + index * 750));
-      });
-      memoryTimers.push(setTimeout(() => {
-        acceptingInput = true;
-        playerStep = 0;
-        memoryMessage.textContent = "Teď zopakuj sekvenci klikáním na barvy.";
-      }, 550 + sequence.length * 750));
-    }
-
-    function memoryGameOver() {
-      stopMemoryGame();
-      const completedRounds = memoryRound - 1;
-      memoryMessage.textContent = "Konec hry! Zvládl/a jsi " + completedRounds + " " + (completedRounds === 1 ? "kolo" : "kol") + ".";
-      memoryStartButton.textContent = "Zkusit znovu";
-      memoryStartButton.style.display = "inline-block";
-    }
-
-    memoryPads.forEach((pad) => pad.addEventListener("click", () => {
-      if (!acceptingInput) return;
-      const chosenColor = Number(pad.dataset.color);
-      flashPad(chosenColor, 180);
-      if (chosenColor !== sequence[playerStep]) {
-        memoryGameOver();
-        return;
-      }
-      playerStep++;
-      if (playerStep === sequence.length) {
-        acceptingInput = false;
-        if (memoryRound > memoryBest) {
-          memoryBest = memoryRound;
-          memoryBestText.textContent = String(memoryBest);
-          localStorage.setItem(MEMORY_BEST_KEY, String(memoryBest));
-        }
-        memoryMessage.textContent = "Správně! Připrav se na další kolo.";
-        memoryTimers.push(setTimeout(nextMemoryRound, 900));
-      }
-    }));
-
-    const MINES_ROWS = 8;
-    const MINES_COLS = 8;
-    const MINES_COUNT = 10;
-    const minesBoardElement = document.getElementById("mines-board");
-    const minesMessage = document.getElementById("mines-message");
-    const minesLeftText = document.getElementById("mines-left");
-    const safeLeftText = document.getElementById("safe-left");
-    const flagToggle = document.getElementById("flag-toggle");
-    let mineCells = [];
-    let mineGameActive = false;
-    let flagMode = false;
-
-    function updateMineCounters() {
-      const flags = mineCells.filter((cell) => cell.flagged).length;
-      const revealedSafe = mineCells.filter((cell) => cell.revealed && !cell.mine).length;
-      minesLeftText.textContent = String(MINES_COUNT - flags);
-      safeLeftText.textContent = String(MINES_ROWS * MINES_COLS - MINES_COUNT - revealedSafe);
-    }
-
-    function neighborsOf(index) {
-      const row = Math.floor(index / MINES_COLS);
-      const col = index % MINES_COLS;
-      const neighbors = [];
-      for (let dr = -1; dr <= 1; dr++) {
-        for (let dc = -1; dc <= 1; dc++) {
-          if (dr === 0 && dc === 0) continue;
-          const nextRow = row + dr;
-          const nextCol = col + dc;
-          if (nextRow >= 0 && nextRow < MINES_ROWS && nextCol >= 0 && nextCol < MINES_COLS) {
-            neighbors.push(nextRow * MINES_COLS + nextCol);
-          }
-        }
-      }
-      return neighbors;
-    }
-
-    function revealMineCell(index) {
-      const cell = mineCells[index];
-      if (!mineGameActive || cell.revealed || cell.flagged) return;
-      cell.revealed = true;
-      const button = minesBoardElement.children[index];
-      button.classList.add("revealed");
-      button.disabled = true;
-      if (cell.mine) {
-        button.textContent = "💣";
-        button.classList.add("mine-hit");
-        mineGameActive = false;
-        mineCells.forEach((mineCell, mineIndex) => {
-          const mineButton = minesBoardElement.children[mineIndex];
-          if (mineCell.mine) {
-            mineButton.textContent = "💣";
-            mineButton.classList.add("revealed");
-          }
-          mineButton.disabled = true;
-        });
-        minesMessage.textContent = "Bum! Narazil/a jsi na minu. Zkus to znovu.";
-        updateMineCounters();
-        return;
-      }
-      if (cell.adjacent > 0) {
-        button.textContent = String(cell.adjacent);
-        button.dataset.number = String(cell.adjacent);
-      } else {
-        neighborsOf(index).forEach(revealMineCell);
-      }
-      updateMineCounters();
-      const remainingSafe = mineCells.filter((mineCell) => !mineCell.mine && !mineCell.revealed).length;
-      if (remainingSafe === 0) {
-        mineGameActive = false;
-        minesMessage.textContent = "Vyhrál/a jsi! Našel/našla jsi všechna bezpečná políčka. 🎉";
-        [...minesBoardElement.children].forEach((cellButton) => { cellButton.disabled = true; });
-      }
-    }
-
-    function toggleMineFlag(index) {
-      const cell = mineCells[index];
-      if (!mineGameActive || cell.revealed) return;
-      cell.flagged = !cell.flagged;
-      const button = minesBoardElement.children[index];
-      button.textContent = cell.flagged ? "🚩" : "";
-      button.classList.toggle("flagged", cell.flagged);
-      updateMineCounters();
-    }
-
-    function setFlagMode(enabled) {
-      flagMode = enabled;
-      flagToggle.classList.toggle("active", flagMode);
-      flagToggle.setAttribute("aria-pressed", String(flagMode));
-      flagToggle.textContent = flagMode ? "🚩 Režim označování: zapnutý" : "🚩 Režim označování: vypnutý";
-    }
-
-    function startMinesGame() {
-      mineGameActive = true;
-      setFlagMode(false);
-      minesMessage.textContent = "Odkryj všechna bezpečná políčka. Číslo ukazuje počet min v okolí.";
-      mineCells = Array.from({ length: MINES_ROWS * MINES_COLS }, () => ({ mine: false, adjacent: 0, revealed: false, flagged: false }));
-      let placed = 0;
-      while (placed < MINES_COUNT) {
-        const index = Math.floor(Math.random() * mineCells.length);
-        if (!mineCells[index].mine) {
-          mineCells[index].mine = true;
-          placed++;
-        }
-      }
-      mineCells.forEach((cell, index) => {
-        if (!cell.mine) cell.adjacent = neighborsOf(index).filter((neighbor) => mineCells[neighbor].mine).length;
-      });
-      minesBoardElement.replaceChildren();
-      mineCells.forEach((cell, index) => {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "mine-cell";
-        button.setAttribute("aria-label", "Zakryté políčko");
-        button.addEventListener("click", () => flagMode ? toggleMineFlag(index) : revealMineCell(index));
-        button.addEventListener("contextmenu", (event) => {
-          event.preventDefault();
-          toggleMineFlag(index);
-        });
-        minesBoardElement.appendChild(button);
-      });
-      updateMineCounters();
-    }
-
-    function stopMinesGame() {
-      mineGameActive = false;
-    }
-
-    const MATH_BEST_KEY = "rychleRovniceNejlepsiSkore";
-    const mathScoreText = document.getElementById("math-score");
-    const mathBestText = document.getElementById("math-best");
-    const mathTimeText = document.getElementById("math-time");
-    const mathMessage = document.getElementById("math-message");
-    const equationText = document.getElementById("equation");
-    const answerForm = document.getElementById("answer-form");
-    const answerInput = document.getElementById("answer-input");
-    const mathSubmit = document.getElementById("math-submit");
-    const mathStartButton = document.getElementById("math-start");
-    let mathScore = 0;
-    let mathTimeLeft = 60;
-    let mathTimer;
-    let mathRunning = false;
-    let correctAnswer = 0;
-    let mathBest = Number(localStorage.getItem(MATH_BEST_KEY)) || 0;
-    mathBestText.textContent = String(mathBest);
-
-    function makeEquation() {
-      const operators = ["+", "−", "×"];
-      const operator = operators[Math.floor(Math.random() * operators.length)];
-      let first;
-      let second;
-      if (operator === "+") {
-        first = Math.floor(Math.random() * 50) + 1;
-        second = Math.floor(Math.random() * 50) + 1;
-        correctAnswer = first + second;
-      } else if (operator === "−") {
-        first = Math.floor(Math.random() * 50) + 1;
-        second = Math.floor(Math.random() * first) + 1;
-        correctAnswer = first - second;
-      } else {
-        first = Math.floor(Math.random() * 12) + 1;
-        second = Math.floor(Math.random() * 12) + 1;
-        correctAnswer = first * second;
-      }
-      equationText.textContent = first + " " + operator + " " + second + " = ?";
-    }
-
-    function finishMathGame() {
-      mathRunning = false;
-      clearInterval(mathTimer);
-      answerInput.disabled = true;
-      mathSubmit.disabled = true;
-      mathStartButton.textContent = "Hrát znovu";
-      mathStartButton.style.display = "inline-block";
-      equationText.textContent = "Konec!";
-      mathMessage.textContent = "Čas vypršel! Tvé skóre: " + mathScore + " správných odpovědí.";
-    }
-
-    function startMathGame() {
-      clearInterval(mathTimer);
-      mathScore = 0;
-      mathTimeLeft = 60;
-      mathRunning = true;
-      mathScoreText.textContent = "0";
-      mathTimeText.textContent = "60";
-      mathMessage.textContent = "Zadej odpověď a stiskni Enter.";
-      mathStartButton.style.display = "none";
-      answerInput.disabled = false;
-      mathSubmit.disabled = false;
-      answerInput.value = "";
-      makeEquation();
-      answerInput.focus();
-      mathTimer = setInterval(() => {
-        mathTimeLeft--;
-        mathTimeText.textContent = String(mathTimeLeft);
-        if (mathTimeLeft <= 0) finishMathGame();
-      }, 1000);
-    }
-
-    function stopMathGame() {
-      mathRunning = false;
-      clearInterval(mathTimer);
-      answerInput.disabled = true;
-      mathSubmit.disabled = true;
-    }
-
-    answerForm.addEventListener("submit", (event) => {
-      event.preventDefault();
-      if (!mathRunning || answerInput.value.trim() === "") return;
-      if (Number(answerInput.value) === correctAnswer) {
-        mathScore++;
-        mathScoreText.textContent = String(mathScore);
-        mathMessage.textContent = "Správně! Pokračuj.";
-        if (mathScore > mathBest) {
-          mathBest = mathScore;
-          mathBestText.textContent = String(mathBest);
-          localStorage.setItem(MATH_BEST_KEY, String(mathBest));
-        }
-      } else {
-        mathMessage.textContent = "To není správně. Zkus další příklad!";
-      }
-      answerInput.value = "";
-      makeEquation();
-      answerInput.focus();
-    });
-
-    document.getElementById("choose-reflex").addEventListener("click", () => showGame("reflex"));
-    document.getElementById("choose-memory").addEventListener("click", () => showGame("memory"));
-    document.getElementById("choose-mines").addEventListener("click", () => showGame("mines"));
-    document.getElementById("choose-math").addEventListener("click", () => showGame("math"));
-    document.querySelectorAll(".back-to-menu").forEach((button) => button.addEventListener("click", returnToMenu));
-    startButton.addEventListener("click", startGame);
-    memoryStartButton.addEventListener("click", startMemoryGame);
-    flagToggle.addEventListener("click", () => setFlagMode(!flagMode));
-    document.getElementById("mines-restart").addEventListener("click", startMinesGame);
-    mathStartButton.addEventListener("click", startMathGame);
-  </script>
+<main class="game">
+  <section id="menu"><h1>Herní koutek</h1><p>Vyber si hru:</p>
+    <button class="game-choice" id="choose-reflex"><strong>🎯 Reflexní terč</strong>Klikni co nejrychleji na terč a nasbírej co nejvíc bodů za 30 sekund.</button>
+    <button class="game-choice" id="choose-memory"><strong>🧠 Barevná paměť</strong>Zapamatuj si pořadí barev a zopakuj ho. Každé kolo přidá jednu barvu.</button>
+    <button class="game-choice" id="choose-mines"><strong>💣 Hledání min</strong>Odkryj bezpečná políčka a označ miny. Pozor, jedna špatná volba a je konec!</button>
+    <button class="game-choice" id="choose-math"><strong>➗ Rychlé rovnice</strong>Vyřeš co nejvíc příkladů za 60 sekund. Odpovědi můžeš zadávat klávesnicí.</button>
+  </section>
+  <section id="reflex-game" class="hidden"><h1>Reflexní terč</h1><div class="info"><span>Skóre: <strong id="score">0</strong></span><span>Nejlepší: <strong id="best">0</strong></span><span>Čas: <strong id="time">30</strong> s</span></div><div id="board" aria-label="Hrací plocha"><div id="target" aria-hidden="true"></div></div><div id="message" aria-live="polite">Střed terče je za 2 body, okraj za 1 bod. Kliknutí vedle odečte 2 body.</div><button class="primary-button" id="start">Začít hrát</button><button class="back-button back-to-menu">← Výběr her</button></section>
+  <section id="memory-game" class="hidden"><h1>Barevná paměť</h1><div class="info"><span>Kolo: <strong id="round">0</strong></span><span>Rekord: <strong id="memory-best">0</strong></span></div><p id="memory-message" aria-live="polite">Zapamatuj si pořadí barev a zopakuj ho klikáním.</p><div id="memory-board" aria-label="Barevná hrací plocha"><div class="memory-pad" id="pad-0" data-color="0" aria-label="Červená"></div><div class="memory-pad" id="pad-1" data-color="1" aria-label="Zelená"></div><div class="memory-pad" id="pad-2" data-color="2" aria-label="Modrá"></div><div class="memory-pad" id="pad-3" data-color="3" aria-label="Žlutá"></div><div class="memory-pad" id="pad-4" data-color="4" aria-label="Fialová"></div><div class="memory-pad" id="pad-5" data-color="5" aria-label="Oranžová"></div><div class="memory-pad" id="pad-6" data-color="6" aria-label="Tyrkysová"></div><div class="memory-pad" id="pad-7" data-color="7" aria-label="Růžová"></div></div><button class="primary-button" id="memory-start">Začít hru</button><button class="back-button back-to-menu">← Výběr her</button></section>
+  <section id="mines-game" class="hidden"><h1>Hledání min</h1><div class="info"><span>Miny: <strong id="mines-left">10</strong></span><span>Políčka: <strong id="safe-left">54</strong></span></div><p id="mines-message" aria-live="polite">Odkryj všechna bezpečná políčka. Číslo ukazuje počet min v okolí.</p><div id="mines-board" aria-label="Hrací plocha Hledání min"></div><button class="primary-button" id="flag-toggle" aria-pressed="false">🚩 Režim označování: vypnutý</button><button class="primary-button" id="mines-restart">Nová hra</button><button class="back-button back-to-menu">← Výběr her</button></section>
+  <section id="math-game" class="hidden"><h1>Rychlé rovnice</h1><div class="info"><span>Skóre: <strong id="math-score">0</strong></span><span>Rekord: <strong id="math-best">0</strong></span><span>Čas: <strong id="math-time">60</strong> s</span></div><p id="math-message" aria-live="polite">Správně vyřeš co nejvíc příkladů za 60 sekund.</p><div id="equation" aria-label="Příklad">Připrav se!</div><form id="answer-form"><input id="answer-input" type="number" inputmode="numeric" autocomplete="off" aria-label="Odpověď" disabled required><button class="primary-button" id="math-submit" type="submit" disabled>Odpovědět</button></form><button class="primary-button" id="math-start">Začít hru</button><button class="back-button back-to-menu">← Výběr her</button></section>
+</main>
+<script>
+  const menu=document.getElementById("menu"), reflexGame=document.getElementById("reflex-game"), memoryGame=document.getElementById("memory-game"), minesGame=document.getElementById("mines-game"), mathGame=document.getElementById("math-game");
+  const board=document.getElementById("board"), target=document.getElementById("target"), startButton=document.getElementById("start"), scoreText=document.getElementById("score"), bestText=document.getElementById("best"), timeText=document.getElementById("time"), message=document.getElementById("message");
+  const BEST_SCORE_KEY="reflexniHraNejlepsiSkore", MEMORY_BEST_KEY="barevnaPametNejlepsiKolo";
+  let score=0,timeLeft=30,timer,gameRunning=false,bestScore=Number(localStorage.getItem(BEST_SCORE_KEY))||0; bestText.textContent=bestScore;
+  function showGame(which){menu.classList.add("hidden");reflexGame.classList.toggle("hidden",which!=="reflex");memoryGame.classList.toggle("hidden",which!=="memory");minesGame.classList.toggle("hidden",which!=="mines");mathGame.classList.toggle("hidden",which!=="math");if(which==="mines")startMinesGame();}
+  function returnToMenu(){gameRunning=false;clearInterval(timer);stopMemoryGame();target.style.display="none";stopMinesGame();stopMathGame();menu.classList.remove("hidden");[reflexGame,memoryGame,minesGame,mathGame].forEach(s=>s.classList.add("hidden"));}
+  function updateBestScore(){if(score>bestScore){bestScore=score;bestText.textContent=bestScore;localStorage.setItem(BEST_SCORE_KEY,String(bestScore));}}
+  function moveTarget(){const maxX=board.clientWidth-target.offsetWidth,maxY=board.clientHeight-target.offsetHeight,oldX=parseFloat(target.style.left)||0,oldY=parseFloat(target.style.top)||0;let x,y,attempts=0;do{x=Math.random()*maxX;y=Math.random()*maxY;attempts++;}while(attempts<10&&Math.hypot(x-oldX,y-oldY)<target.offsetWidth*2);target.style.left=x+"px";target.style.top=y+"px";}
+  function finishGame(){gameRunning=false;clearInterval(timer);target.style.display="none";startButton.textContent="Hrát znovu";startButton.style.display="inline-block";message.textContent="Čas vypršel! Tvé skóre: "+score;}
+  function startGame(){score=0;timeLeft=30;gameRunning=true;scoreText.textContent=score;timeText.textContent=timeLeft;message.textContent="Střed terče je za 2 body, okraj za 1 bod. Kliknutí vedle odečte 2 body.";startButton.style.display="none";target.style.display="block";moveTarget();clearInterval(timer);timer=setInterval(()=>{timeText.textContent=--timeLeft;if(timeLeft<=0)finishGame();},1000);}
+  target.addEventListener("click",event=>{if(!gameRunning)return;const b=target.getBoundingClientRect(),center=Math.hypot(event.clientX-(b.left+b.width/2),event.clientY-(b.top+b.height/2))<=13;score+=center?2:1;scoreText.textContent=score;message.textContent=center?"Zásah do středu! +2 body":"Zásah na okraj! +1 bod";updateBestScore();moveTarget();});
+  board.addEventListener("click",event=>{if(!gameRunning||event.target===target)return;score-=2;scoreText.textContent=score;message.textContent="Vedle! Odečteny 2 body, cíl se přesunul.";moveTarget();});
+  const memoryPads=[...document.querySelectorAll(".memory-pad")], memoryMessage=document.getElementById("memory-message"), roundText=document.getElementById("round"), memoryBestText=document.getElementById("memory-best"), memoryStartButton=document.getElementById("memory-start");
+  let sequence=[],playerStep=0,memoryRound=0,acceptingInput=false,memoryTimers=[],memoryBest=Number(localStorage.getItem(MEMORY_BEST_KEY))||0;memoryBestText.textContent=memoryBest;
+  function stopMemoryGame(){memoryTimers.forEach(clearTimeout);memoryTimers=[];acceptingInput=false;memoryPads.forEach(p=>p.classList.remove("active"));}
+  function flashPad(color,duration=450){const pad=memoryPads[color];pad.classList.add("active");memoryTimers.push(setTimeout(()=>pad.classList.remove("active"),duration));}
+  function startMemoryGame(){stopMemoryGame();sequence=[];playerStep=0;memoryRound=0;roundText.textContent="0";memoryStartButton.style.display="none";nextMemoryRound();}
+  function nextMemoryRound(){acceptingInput=false;memoryRound++;roundText.textContent=String(memoryRound);sequence.push(Math.floor(Math.random()*memoryPads.length));memoryMessage.textContent="Pozor! Zapamatuj si pořadí…";sequence.forEach((color,index)=>memoryTimers.push(setTimeout(()=>flashPad(color),550+index*750)));memoryTimers.push(setTimeout(()=>{acceptingInput=true;playerStep=0;memoryMessage.textContent="Teď zopakuj sekvenci klikáním na barvy.";},550+sequence.length*750));}
+  function memoryGameOver(){stopMemoryGame();const n=memoryRound-1;memoryMessage.textContent="Konec hry! Zvládl/a jsi "+n+" "+(n===1?"kolo":"kol")+".";memoryStartButton.textContent="Zkusit znovu";memoryStartButton.style.display="inline-block";}
+  memoryPads.forEach(pad=>pad.addEventListener("click",()=>{if(!acceptingInput)return;const color=Number(pad.dataset.color);flashPad(color,180);if(color!==sequence[playerStep])return memoryGameOver();if(++playerStep===sequence.length){acceptingInput=false;if(memoryRound>memoryBest){memoryBest=memoryRound;memoryBestText.textContent=String(memoryBest);localStorage.setItem(MEMORY_BEST_KEY,String(memoryBest));}memoryMessage.textContent="Správně! Připrav se na další kolo.";memoryTimers.push(setTimeout(nextMemoryRound,900));}}));
+  const MINES_ROWS=8,MINES_COLS=8,MINES_COUNT=10,minesBoardElement=document.getElementById("mines-board"),minesMessage=document.getElementById("mines-message"),minesLeftText=document.getElementById("mines-left"),safeLeftText=document.getElementById("safe-left"),flagToggle=document.getElementById("flag-toggle");let mineCells=[],mineGameActive=false,flagMode=false;
+  function updateMineCounters(){minesLeftText.textContent=String(MINES_COUNT-mineCells.filter(c=>c.flagged).length);safeLeftText.textContent=String(MINES_ROWS*MINES_COLS-MINES_COUNT-mineCells.filter(c=>c.revealed&&!c.mine).length);}
+  function neighborsOf(index){const row=Math.floor(index/MINES_COLS),col=index%MINES_COLS,out=[];for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){const r=row+dr,c=col+dc;if((dr||dc)&&r>=0&&r<MINES_ROWS&&c>=0&&c<MINES_COLS)out.push(r*MINES_COLS+c);}return out;}
+  function revealMineCell(index){const cell=mineCells[index];if(!mineGameActive||cell.revealed||cell.flagged)return;cell.revealed=true;const button=minesBoardElement.children[index];button.classList.add("revealed");button.disabled=true;if(cell.mine){button.textContent="💣";button.classList.add("mine-hit");mineGameActive=false;mineCells.forEach((c,i)=>{const b=minesBoardElement.children[i];if(c.mine){b.textContent="💣";b.classList.add("revealed");}b.disabled=true;});minesMessage.textContent="Bum! Narazil/a jsi na minu. Zkus to znovu.";updateMineCounters();return;}if(cell.adjacent){button.textContent=String(cell.adjacent);button.dataset.number=String(cell.adjacent);}else neighborsOf(index).forEach(revealMineCell);updateMineCounters();if(mineCells.filter(c=>!c.mine&&!c.revealed).length===0){mineGameActive=false;minesMessage.textContent="Vyhrál/a jsi! Našel/našla jsi všechna bezpečná políčka. 🎉";[...minesBoardElement.children].forEach(b=>b.disabled=true);}}
+  function toggleMineFlag(index){const cell=mineCells[index];if(!mineGameActive||cell.revealed)return;cell.flagged=!cell.flagged;const b=minesBoardElement.children[index];b.textContent=cell.flagged?"🚩":"";b.classList.toggle("flagged",cell.flagged);updateMineCounters();}
+  function setFlagMode(enabled){flagMode=enabled;flagToggle.classList.toggle("active",flagMode);flagToggle.setAttribute("aria-pressed",String(flagMode));flagToggle.textContent=flagMode?"🚩 Režim označování: zapnutý":"🚩 Režim označování: vypnutý";}
+  function startMinesGame(){mineGameActive=true;setFlagMode(false);minesMessage.textContent="Odkryj všechna bezpečná políčka. Číslo ukazuje počet min v okolí.";mineCells=Array.from({length:64},()=>({mine:false,adjacent:0,revealed:false,flagged:false}));let placed=0;while(placed<MINES_COUNT){const i=Math.floor(Math.random()*mineCells.length);if(!mineCells[i].mine){mineCells[i].mine=true;placed++;}}mineCells.forEach((c,i)=>{if(!c.mine)c.adjacent=neighborsOf(i).filter(n=>mineCells[n].mine).length;});minesBoardElement.replaceChildren();mineCells.forEach((c,i)=>{const b=document.createElement("button");b.type="button";b.className="mine-cell";b.setAttribute("aria-label","Zakryté políčko");b.addEventListener("click",()=>flagMode?toggleMineFlag(i):revealMineCell(i));b.addEventListener("contextmenu",e=>{e.preventDefault();toggleMineFlag(i);});minesBoardElement.appendChild(b);});updateMineCounters();}
+  function stopMinesGame(){mineGameActive=false;}
+  const MATH_BEST_KEY="rychleRovniceNejlepsiSkore",mathScoreText=document.getElementById("math-score"),mathBestText=document.getElementById("math-best"),mathTimeText=document.getElementById("math-time"),mathMessage=document.getElementById("math-message"),equationText=document.getElementById("equation"),answerForm=document.getElementById("answer-form"),answerInput=document.getElementById("answer-input"),mathSubmit=document.getElementById("math-submit"),mathStartButton=document.getElementById("math-start");let mathScore=0,mathTimeLeft=60,mathTimer,mathRunning=false,correctAnswer=0,mathBest=Number(localStorage.getItem(MATH_BEST_KEY))||0;mathBestText.textContent=String(mathBest);
+  function randomInt(min,max){return Math.floor(Math.random()*(max-min+1))+min;}
+  function makeEquation(){
+    // Těžší mix: vícemístné výpočty, dělení beze zbytku a příklady se dvěma operacemi.
+    const type=randomInt(0,5);let expression;
+    if(type===0){const a=randomInt(120,999),b=randomInt(120,999);if(Math.random()<.5){expression=`${a} + ${b}`;correctAnswer=a+b;}else{const high=Math.max(a,b),low=Math.min(a,b);expression=`${high} − ${low}`;correctAnswer=high-low;}}
+    else if(type===1){const a=randomInt(12,99),b=randomInt(12,99);expression=`${a} × ${b}`;correctAnswer=a*b;}
+    else if(type===2){const divisor=randomInt(2,25),quotient=randomInt(12,99);expression=`${divisor*quotient} ÷ ${divisor}`;correctAnswer=quotient;}
+    else if(type===3){const a=randomInt(10,60),b=randomInt(2,12),c=randomInt(10,99);expression=`${a} + ${b} × ${c}`;correctAnswer=a+b*c;}
+    else if(type===4){const a=randomInt(12,80),b=randomInt(2,12),c=randomInt(2,30);expression=`${a} × ${b} − ${c}`;correctAnswer=a*b-c;}
+    else{const divisor=randomInt(2,12),quotient=randomInt(12,60),add=randomInt(15,120);expression=`${divisor*quotient} ÷ ${divisor} + ${add}`;correctAnswer=quotient+add;}
+    equationText.textContent=expression+" = ?";
+  }
+  function finishMathGame(){mathRunning=false;clearInterval(mathTimer);answerInput.disabled=true;mathSubmit.disabled=true;mathStartButton.textContent="Hrát znovu";mathStartButton.style.display="inline-block";equationText.textContent="Konec!";mathMessage.textContent="Čas vypršel! Tvé skóre: "+mathScore+" správných odpovědí.";}
+  function startMathGame(){clearInterval(mathTimer);mathScore=0;mathTimeLeft=60;mathRunning=true;mathScoreText.textContent="0";mathTimeText.textContent="60";mathMessage.textContent="Zadej odpověď a stiskni Enter.";mathStartButton.style.display="none";answerInput.disabled=false;mathSubmit.disabled=false;answerInput.value="";makeEquation();answerInput.focus();mathTimer=setInterval(()=>{mathTimeText.textContent=String(--mathTimeLeft);if(mathTimeLeft<=0)finishMathGame();},1000);}
+  function stopMathGame(){mathRunning=false;clearInterval(mathTimer);answerInput.disabled=true;mathSubmit.disabled=true;}
+  answerForm.addEventListener("submit",event=>{event.preventDefault();if(!mathRunning||answerInput.value.trim()==="")return;if(Number(answerInput.value)===correctAnswer){mathScore++;mathScoreText.textContent=String(mathScore);mathMessage.textContent="Správně! Pokračuj.";if(mathScore>mathBest){mathBest=mathScore;mathBestText.textContent=String(mathBest);localStorage.setItem(MATH_BEST_KEY,String(mathBest));}}else mathMessage.textContent="To není správně. Zkus další příklad!";answerInput.value="";makeEquation();answerInput.focus();});
+  document.getElementById("choose-reflex").addEventListener("click",()=>showGame("reflex"));document.getElementById("choose-memory").addEventListener("click",()=>showGame("memory"));document.getElementById("choose-mines").addEventListener("click",()=>showGame("mines"));document.getElementById("choose-math").addEventListener("click",()=>showGame("math"));document.querySelectorAll(".back-to-menu").forEach(b=>b.addEventListener("click",returnToMenu));startButton.addEventListener("click",startGame);memoryStartButton.addEventListener("click",startMemoryGame);flagToggle.addEventListener("click",()=>setFlagMode(!flagMode));document.getElementById("mines-restart").addEventListener("click",startMinesGame);mathStartButton.addEventListener("click",startMathGame);
+</script>
 </body>
 </html>
