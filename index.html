@@ -47,7 +47,7 @@
       box-shadow: 0 0 16px rgba(239, 68, 68, 0.8);
       cursor: pointer;
       display: none;
-      transition: left 0.35s ease, top 0.35s ease;
+      transition: left 1.2s ease, top 1.2s ease;
     }
     #target::after {
       content: "";
@@ -180,8 +180,8 @@
       moveTarget();
 
       if (hitCount % 5 === 4) {
-        message.textContent = hitMessage + " Další cíl se bude pohybovat!";
-        movementTimer = setInterval(moveTarget, 700);
+        message.textContent = hitMessage + " Další cíl se bude pohybovat pomaleji!";
+        movementTimer = setInterval(moveTarget, 1600);
       } else {
         message.textContent = hitMessage;
       }
