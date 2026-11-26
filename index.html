@@ -16,10 +16,7 @@
       background: linear-gradient(135deg, #111827, #1e3a8a);
       color: white;
     }
-    .game {
-      width: min(800px, 92vw);
-      text-align: center;
-    }
+    .game { width: min(800px, 92vw); text-align: center; }
     h1 { margin-top: 0; }
     .info {
       display: flex;
@@ -122,13 +119,41 @@
     #pad-5 { background: #f97316; color: #f97316; }
     #pad-6 { background: #06b6d4; color: #06b6d4; }
     #pad-7 { background: #ec4899; color: #ec4899; }
+    #mines-board {
+      display: grid;
+      grid-template-columns: repeat(8, minmax(0, 1fr));
+      gap: 4px;
+      width: min(440px, 100%);
+      margin: 18px auto;
+      padding: 8px;
+      border-radius: 12px;
+      background: #334155;
+    }
+    .mine-cell {
+      aspect-ratio: 1;
+      min-width: 0;
+      border: 0;
+      border-radius: 5px;
+      background: #94a3b8;
+      color: #111827;
+      font-size: clamp(14px, 4vw, 22px);
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .mine-cell:hover:not(.revealed) { background: #cbd5e1; }
+    .mine-cell.revealed { background: #e2e8f0; cursor: default; }
+    .mine-cell.mine-hit { background: #ef4444; }
+    .mine-cell.flagged { background: #fbbf24; }
+    .mine-cell[data-number="1"] { color: #2563eb; }
+    .mine-cell[data-number="2"] { color: #16a34a; }
+    .mine-cell[data-number="3"] { color: #dc2626; }
+    .mine-cell[data-number="4"] { color: #7c3aed; }
+    #flag-toggle.active { background: #d97706; }
     @media (max-width: 480px) {
       .info { justify-content: center; font-size: 18px; }
-      #memory-board {
-        grid-template-columns: repeat(4, minmax(55px, 1fr));
-        gap: 8px;
-      }
+      #memory-board { grid-template-columns: repeat(4, minmax(55px, 1fr)); gap: 8px; }
       .memory-pad { height: 90px; border-radius: 13px; }
+      #mines-board { gap: 3px; padding: 5px; }
     }
   </style>
 </head>
@@ -145,6 +170,10 @@
         <strong>🧠 Barevná paměť</strong>
         Zapamatuj si pořadí barev a zopakuj ho. Každé kolo přidá jednu barvu.
       </button>
+      <button class="game-choice" id="choose-mines">
+        <strong>💣 Hledání min</strong>
+        Odkryj bezpečná políčka a označ miny. Pozor, jedna špatná volba a je konec!
+      </button>
     </section>
 
     <section id="reflex-game" class="hidden">
@@ -154,9 +183,7 @@
         <span>Nejlepší: <strong id="best">0</strong></span>
         <span>Čas: <strong id="time">30</strong> s</span>
       </div>
-      <div id="board" aria-label="Hrací plocha">
-        <div id="target" aria-hidden="true"></div>
-      </div>
+      <div id="board" aria-label="Hrací plocha"><div id="target" aria-hidden="true"></div></div>
       <div id="message" aria-live="polite">Střed terče je za 2 body, okraj za 1 bod. Kliknutí vedle odečte 2 body.</div>
       <button class="primary-button" id="start">Začít hrát</button>
       <button class="back-button back-to-menu">← Výběr her</button>
@@ -182,12 +209,26 @@
       <button class="primary-button" id="memory-start">Začít hru</button>
       <button class="back-button back-to-menu">← Výběr her</button>
     </section>
+
+    <section id="mines-game" class="hidden">
+      <h1>Hledání min</h1>
+      <div class="info">
+        <span>Miny: <strong id="mines-left">10</strong></span>
+        <span>Políčka: <strong id="safe-left">54</strong></span>
+      </div>
+      <p id="mines-message" aria-live="polite">Odkryj všechna bezpečná políčka. Číslo ukazuje počet min v okolí.</p>
+      <div id="mines-board" aria-label="Hrací plocha Hledání min"></div>
+      <button class="primary-button" id="flag-toggle" aria-pressed="false">🚩 Režim označování: vypnutý</button>
+      <button class="primary-button" id="mines-restart">Nová hra</button>
+      <button class="back-button back-to-menu">← Výběr her</button>
+    </section>
   </main>
 
   <script>
     const menu = document.getElementById("menu");
     const reflexGame = document.getElementById("reflex-game");
     const memoryGame = document.getElementById("memory-game");
+    const minesGame = document.getElementById("mines-game");
     const board = document.getElementById("board");
     const target = document.getElementById("target");
     const startButton = document.getElementById("start");
@@ -195,7 +236,6 @@
     const bestText = document.getElementById("best");
     const timeText = document.getElementById("time");
     const message = document.getElementById("message");
-
     const BEST_SCORE_KEY = "reflexniHraNejlepsiSkore";
     const MEMORY_BEST_KEY = "barevnaPametNejlepsiKolo";
     let score = 0;
@@ -209,6 +249,8 @@
       menu.classList.add("hidden");
       reflexGame.classList.toggle("hidden", which !== "reflex");
       memoryGame.classList.toggle("hidden", which !== "memory");
+      minesGame.classList.toggle("hidden", which !== "mines");
+      if (which === "mines") startMinesGame();
     }
 
     function returnToMenu() {
@@ -216,9 +258,11 @@
       clearInterval(timer);
       stopMemoryGame();
       target.style.display = "none";
+      stopMinesGame();
       menu.classList.remove("hidden");
       reflexGame.classList.add("hidden");
       memoryGame.classList.add("hidden");
+      minesGame.classList.add("hidden");
     }
 
     function updateBestScore() {
@@ -234,9 +278,7 @@
       const maxY = board.clientHeight - target.offsetHeight;
       const oldX = parseFloat(target.style.left) || 0;
       const oldY = parseFloat(target.style.top) || 0;
-      let x;
-      let y;
-      let attempts = 0;
+      let x, y, attempts = 0;
       do {
         x = Math.random() * maxX;
         y = Math.random() * maxY;
@@ -276,9 +318,7 @@
     target.addEventListener("click", (event) => {
       if (!gameRunning) return;
       const bounds = target.getBoundingClientRect();
-      const centerX = bounds.left + bounds.width / 2;
-      const centerY = bounds.top + bounds.height / 2;
-      const distance = Math.hypot(event.clientX - centerX, event.clientY - centerY);
+      const distance = Math.hypot(event.clientX - (bounds.left + bounds.width / 2), event.clientY - (bounds.top + bounds.height / 2));
       const hitCenter = distance <= 13;
       score += hitCenter ? 2 : 1;
       scoreText.textContent = score;
@@ -338,18 +378,14 @@
       roundText.textContent = String(memoryRound);
       sequence.push(Math.floor(Math.random() * memoryPads.length));
       memoryMessage.textContent = "Pozor! Zapamatuj si pořadí…";
-
       sequence.forEach((color, index) => {
-        const timerId = setTimeout(() => flashPad(color), 550 + index * 750);
-        memoryTimers.push(timerId);
+        memoryTimers.push(setTimeout(() => flashPad(color), 550 + index * 750));
       });
-
-      const unlockTimer = setTimeout(() => {
+      memoryTimers.push(setTimeout(() => {
         acceptingInput = true;
         playerStep = 0;
         memoryMessage.textContent = "Teď zopakuj sekvenci klikáním na barvy.";
-      }, 550 + sequence.length * 750);
-      memoryTimers.push(unlockTimer);
+      }, 550 + sequence.length * 750));
     }
 
     function memoryGameOver() {
@@ -360,37 +396,162 @@
       memoryStartButton.style.display = "inline-block";
     }
 
-    memoryPads.forEach((pad) => {
-      pad.addEventListener("click", () => {
-        if (!acceptingInput) return;
-        const chosenColor = Number(pad.dataset.color);
-        flashPad(chosenColor, 180);
-
-        if (chosenColor !== sequence[playerStep]) {
-          memoryGameOver();
-          return;
+    memoryPads.forEach((pad) => pad.addEventListener("click", () => {
+      if (!acceptingInput) return;
+      const chosenColor = Number(pad.dataset.color);
+      flashPad(chosenColor, 180);
+      if (chosenColor !== sequence[playerStep]) {
+        memoryGameOver();
+        return;
+      }
+      playerStep++;
+      if (playerStep === sequence.length) {
+        acceptingInput = false;
+        if (memoryRound > memoryBest) {
+          memoryBest = memoryRound;
+          memoryBestText.textContent = String(memoryBest);
+          localStorage.setItem(MEMORY_BEST_KEY, String(memoryBest));
         }
+        memoryMessage.textContent = "Správně! Připrav se na další kolo.";
+        memoryTimers.push(setTimeout(nextMemoryRound, 900));
+      }
+    }));
 
-        playerStep++;
-        if (playerStep === sequence.length) {
-          acceptingInput = false;
-          if (memoryRound > memoryBest) {
-            memoryBest = memoryRound;
-            memoryBestText.textContent = String(memoryBest);
-            localStorage.setItem(MEMORY_BEST_KEY, String(memoryBest));
+    const MINES_ROWS = 8;
+    const MINES_COLS = 8;
+    const MINES_COUNT = 10;
+    const minesBoardElement = document.getElementById("mines-board");
+    const minesMessage = document.getElementById("mines-message");
+    const minesLeftText = document.getElementById("mines-left");
+    const safeLeftText = document.getElementById("safe-left");
+    const flagToggle = document.getElementById("flag-toggle");
+    let mineCells = [];
+    let mineGameActive = false;
+    let flagMode = false;
+
+    function updateMineCounters() {
+      const flags = mineCells.filter((cell) => cell.flagged).length;
+      const revealedSafe = mineCells.filter((cell) => cell.revealed && !cell.mine).length;
+      minesLeftText.textContent = String(MINES_COUNT - flags);
+      safeLeftText.textContent = String(MINES_ROWS * MINES_COLS - MINES_COUNT - revealedSafe);
+    }
+
+    function neighborsOf(index) {
+      const row = Math.floor(index / MINES_COLS);
+      const col = index % MINES_COLS;
+      const neighbors = [];
+      for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+          if (dr === 0 && dc === 0) continue;
+          const nextRow = row + dr;
+          const nextCol = col + dc;
+          if (nextRow >= 0 && nextRow < MINES_ROWS && nextCol >= 0 && nextCol < MINES_COLS) {
+            neighbors.push(nextRow * MINES_COLS + nextCol);
           }
-          memoryMessage.textContent = "Správně! Připrav se na další kolo.";
-          const nextTimer = setTimeout(nextMemoryRound, 900);
-          memoryTimers.push(nextTimer);
         }
+      }
+      return neighbors;
+    }
+
+    function revealMineCell(index) {
+      const cell = mineCells[index];
+      if (!mineGameActive || cell.revealed || cell.flagged) return;
+      cell.revealed = true;
+      const button = minesBoardElement.children[index];
+      button.classList.add("revealed");
+      button.disabled = true;
+      if (cell.mine) {
+        button.textContent = "💣";
+        button.classList.add("mine-hit");
+        mineGameActive = false;
+        mineCells.forEach((mineCell, mineIndex) => {
+          if (mineCell.mine) {
+            const mineButton = minesBoardElement.children[mineIndex];
+            mineButton.textContent = "💣";
+            mineButton.classList.add("revealed");
+          }
+          mineButton.disabled = true;
+        });
+        minesMessage.textContent = "Bum! Narazil/a jsi na minu. Zkus to znovu.";
+        updateMineCounters();
+        return;
+      }
+      if (cell.adjacent > 0) {
+        button.textContent = String(cell.adjacent);
+        button.dataset.number = String(cell.adjacent);
+      } else {
+        neighborsOf(index).forEach(revealMineCell);
+      }
+      updateMineCounters();
+      const remainingSafe = mineCells.filter((mineCell) => !mineCell.mine && !mineCell.revealed).length;
+      if (remainingSafe === 0) {
+        mineGameActive = false;
+        minesMessage.textContent = "Vyhrál/a jsi! Našel/našla jsi všechna bezpečná políčka. 🎉";
+        [...minesBoardElement.children].forEach((button) => { button.disabled = true; });
+      }
+    }
+
+    function toggleMineFlag(index) {
+      const cell = mineCells[index];
+      if (!mineGameActive || cell.revealed) return;
+      cell.flagged = !cell.flagged;
+      const button = minesBoardElement.children[index];
+      button.textContent = cell.flagged ? "🚩" : "";
+      button.classList.toggle("flagged", cell.flagged);
+      updateMineCounters();
+    }
+
+    function setFlagMode(enabled) {
+      flagMode = enabled;
+      flagToggle.classList.toggle("active", flagMode);
+      flagToggle.setAttribute("aria-pressed", String(flagMode));
+      flagToggle.textContent = flagMode ? "🚩 Režim označování: zapnutý" : "🚩 Režim označování: vypnutý";
+    }
+
+    function startMinesGame() {
+      mineGameActive = true;
+      setFlagMode(false);
+      minesMessage.textContent = "Odkryj všechna bezpečná políčka. Číslo ukazuje počet min v okolí.";
+      mineCells = Array.from({ length: MINES_ROWS * MINES_COLS }, () => ({ mine: false, adjacent: 0, revealed: false, flagged: false }));
+      let placed = 0;
+      while (placed < MINES_COUNT) {
+        const index = Math.floor(Math.random() * mineCells.length);
+        if (!mineCells[index].mine) {
+          mineCells[index].mine = true;
+          placed++;
+        }
+      }
+      mineCells.forEach((cell, index) => {
+        if (!cell.mine) cell.adjacent = neighborsOf(index).filter((neighbor) => mineCells[neighbor].mine).length;
       });
-    });
+      minesBoardElement.replaceChildren();
+      mineCells.forEach((cell, index) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "mine-cell";
+        button.setAttribute("aria-label", "Zakryté políčko");
+        button.addEventListener("click", () => flagMode ? toggleMineFlag(index) : revealMineCell(index));
+        button.addEventListener("contextmenu", (event) => {
+          event.preventDefault();
+          toggleMineFlag(index);
+        });
+        minesBoardElement.appendChild(button);
+      });
+      updateMineCounters();
+    }
+
+    function stopMinesGame() {
+      mineGameActive = false;
+    }
 
     document.getElementById("choose-reflex").addEventListener("click", () => showGame("reflex"));
     document.getElementById("choose-memory").addEventListener("click", () => showGame("memory"));
+    document.getElementById("choose-mines").addEventListener("click", () => showGame("mines"));
     document.querySelectorAll(".back-to-menu").forEach((button) => button.addEventListener("click", returnToMenu));
     startButton.addEventListener("click", startGame);
     memoryStartButton.addEventListener("click", startMemoryGame);
+    flagToggle.addEventListener("click", () => setFlagMode(!flagMode));
+    document.getElementById("mines-restart").addEventListener("click", startMinesGame);
   </script>
 </body>
 </html>
