@@ -149,6 +149,19 @@
     .mine-cell[data-number="3"] { color: #dc2626; }
     .mine-cell[data-number="4"] { color: #7c3aed; }
     #flag-toggle.active { background: #d97706; }
+    #equation {
+      margin: 35px 0 24px;
+      font-size: clamp(42px, 10vw, 72px);
+      font-weight: bold;
+    }
+    #answer-input {
+      width: min(220px, 60vw);
+      padding: 12px;
+      border: 2px solid #60a5fa;
+      border-radius: 8px;
+      font-size: 24px;
+      text-align: center;
+    }
     @media (max-width: 480px) {
       .info { justify-content: center; font-size: 18px; }
       #memory-board { grid-template-columns: repeat(4, minmax(55px, 1fr)); gap: 8px; }
@@ -173,6 +186,10 @@
       <button class="game-choice" id="choose-mines">
         <strong>💣 Hledání min</strong>
         Odkryj bezpečná políčka a označ miny. Pozor, jedna špatná volba a je konec!
+      </button>
+      <button class="game-choice" id="choose-math">
+        <strong>➗ Rychlé rovnice</strong>
+        Vyřeš co nejvíc příkladů za 60 sekund. Odpovědi můžeš zadávat klávesnicí.
       </button>
     </section>
 
@@ -222,6 +239,23 @@
       <button class="primary-button" id="mines-restart">Nová hra</button>
       <button class="back-button back-to-menu">← Výběr her</button>
     </section>
+
+    <section id="math-game" class="hidden">
+      <h1>Rychlé rovnice</h1>
+      <div class="info">
+        <span>Skóre: <strong id="math-score">0</strong></span>
+        <span>Rekord: <strong id="math-best">0</strong></span>
+        <span>Čas: <strong id="math-time">60</strong> s</span>
+      </div>
+      <p id="math-message" aria-live="polite">Správně vyřeš co nejvíc příkladů za 60 sekund.</p>
+      <div id="equation" aria-label="Příklad">Připrav se!</div>
+      <form id="answer-form">
+        <input id="answer-input" type="number" inputmode="numeric" autocomplete="off" aria-label="Odpověď" disabled required>
+        <button class="primary-button" id="math-submit" type="submit" disabled>Odpovědět</button>
+      </form>
+      <button class="primary-button" id="math-start">Začít hru</button>
+      <button class="back-button back-to-menu">← Výběr her</button>
+    </section>
   </main>
 
   <script>
@@ -229,6 +263,7 @@
     const reflexGame = document.getElementById("reflex-game");
     const memoryGame = document.getElementById("memory-game");
     const minesGame = document.getElementById("mines-game");
+    const mathGame = document.getElementById("math-game");
     const board = document.getElementById("board");
     const target = document.getElementById("target");
     const startButton = document.getElementById("start");
@@ -250,6 +285,7 @@
       reflexGame.classList.toggle("hidden", which !== "reflex");
       memoryGame.classList.toggle("hidden", which !== "memory");
       minesGame.classList.toggle("hidden", which !== "mines");
+      mathGame.classList.toggle("hidden", which !== "math");
       if (which === "mines") startMinesGame();
     }
 
@@ -259,10 +295,12 @@
       stopMemoryGame();
       target.style.display = "none";
       stopMinesGame();
+      stopMathGame();
       menu.classList.remove("hidden");
       reflexGame.classList.add("hidden");
       memoryGame.classList.add("hidden");
       minesGame.classList.add("hidden");
+      mathGame.classList.add("hidden");
     }
 
     function updateBestScore() {
@@ -465,8 +503,8 @@
         button.classList.add("mine-hit");
         mineGameActive = false;
         mineCells.forEach((mineCell, mineIndex) => {
+          const mineButton = minesBoardElement.children[mineIndex];
           if (mineCell.mine) {
-            const mineButton = minesBoardElement.children[mineIndex];
             mineButton.textContent = "💣";
             mineButton.classList.add("revealed");
           }
@@ -487,7 +525,7 @@
       if (remainingSafe === 0) {
         mineGameActive = false;
         minesMessage.textContent = "Vyhrál/a jsi! Našel/našla jsi všechna bezpečná políčka. 🎉";
-        [...minesBoardElement.children].forEach((button) => { button.disabled = true; });
+        [...minesBoardElement.children].forEach((cellButton) => { cellButton.disabled = true; });
       }
     }
 
@@ -544,14 +582,114 @@
       mineGameActive = false;
     }
 
+    const MATH_BEST_KEY = "rychleRovniceNejlepsiSkore";
+    const mathScoreText = document.getElementById("math-score");
+    const mathBestText = document.getElementById("math-best");
+    const mathTimeText = document.getElementById("math-time");
+    const mathMessage = document.getElementById("math-message");
+    const equationText = document.getElementById("equation");
+    const answerForm = document.getElementById("answer-form");
+    const answerInput = document.getElementById("answer-input");
+    const mathSubmit = document.getElementById("math-submit");
+    const mathStartButton = document.getElementById("math-start");
+    let mathScore = 0;
+    let mathTimeLeft = 60;
+    let mathTimer;
+    let mathRunning = false;
+    let correctAnswer = 0;
+    let mathBest = Number(localStorage.getItem(MATH_BEST_KEY)) || 0;
+    mathBestText.textContent = String(mathBest);
+
+    function makeEquation() {
+      const operators = ["+", "−", "×"];
+      const operator = operators[Math.floor(Math.random() * operators.length)];
+      let first;
+      let second;
+      if (operator === "+") {
+        first = Math.floor(Math.random() * 50) + 1;
+        second = Math.floor(Math.random() * 50) + 1;
+        correctAnswer = first + second;
+      } else if (operator === "−") {
+        first = Math.floor(Math.random() * 50) + 1;
+        second = Math.floor(Math.random() * first) + 1;
+        correctAnswer = first - second;
+      } else {
+        first = Math.floor(Math.random() * 12) + 1;
+        second = Math.floor(Math.random() * 12) + 1;
+        correctAnswer = first * second;
+      }
+      equationText.textContent = first + " " + operator + " " + second + " = ?";
+    }
+
+    function finishMathGame() {
+      mathRunning = false;
+      clearInterval(mathTimer);
+      answerInput.disabled = true;
+      mathSubmit.disabled = true;
+      mathStartButton.textContent = "Hrát znovu";
+      mathStartButton.style.display = "inline-block";
+      equationText.textContent = "Konec!";
+      mathMessage.textContent = "Čas vypršel! Tvé skóre: " + mathScore + " správných odpovědí.";
+    }
+
+    function startMathGame() {
+      clearInterval(mathTimer);
+      mathScore = 0;
+      mathTimeLeft = 60;
+      mathRunning = true;
+      mathScoreText.textContent = "0";
+      mathTimeText.textContent = "60";
+      mathMessage.textContent = "Zadej odpověď a stiskni Enter.";
+      mathStartButton.style.display = "none";
+      answerInput.disabled = false;
+      mathSubmit.disabled = false;
+      answerInput.value = "";
+      makeEquation();
+      answerInput.focus();
+      mathTimer = setInterval(() => {
+        mathTimeLeft--;
+        mathTimeText.textContent = String(mathTimeLeft);
+        if (mathTimeLeft <= 0) finishMathGame();
+      }, 1000);
+    }
+
+    function stopMathGame() {
+      mathRunning = false;
+      clearInterval(mathTimer);
+      answerInput.disabled = true;
+      mathSubmit.disabled = true;
+    }
+
+    answerForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      if (!mathRunning || answerInput.value.trim() === "") return;
+      if (Number(answerInput.value) === correctAnswer) {
+        mathScore++;
+        mathScoreText.textContent = String(mathScore);
+        mathMessage.textContent = "Správně! Pokračuj.";
+        if (mathScore > mathBest) {
+          mathBest = mathScore;
+          mathBestText.textContent = String(mathBest);
+          localStorage.setItem(MATH_BEST_KEY, String(mathBest));
+        }
+      } else {
+        mathMessage.textContent = "To není správně. Zkus další příklad!";
+      }
+      answerInput.value = "";
+      makeEquation();
+      answerInput.focus();
+    });
+
     document.getElementById("choose-reflex").addEventListener("click", () => showGame("reflex"));
     document.getElementById("choose-memory").addEventListener("click", () => showGame("memory"));
     document.getElementById("choose-mines").addEventListener("click", () => showGame("mines"));
+    document.getElementById("choose-math").addEventListener("click", () => showGame("math"));
     document.querySelectorAll(".back-to-menu").forEach((button) => button.addEventListener("click", returnToMenu));
     startButton.addEventListener("click", startGame);
     memoryStartButton.addEventListener("click", startMemoryGame);
     flagToggle.addEventListener("click", () => setFlagMode(!flagMode));
     document.getElementById("mines-restart").addEventListener("click", startMinesGame);
+    mathStartButton.addEventListener("click", startMathGame);
   </script>
 </body>
 </html>
