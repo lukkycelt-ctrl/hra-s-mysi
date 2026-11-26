@@ -42,7 +42,6 @@
       position: absolute;
       width: 54px;
       height: 54px;
-      border: 0;
       border-radius: 50%;
       background: #ef4444;
       box-shadow: 0 0 16px rgba(239, 68, 68, 0.8);
@@ -84,7 +83,7 @@
     </div>
 
     <div id="board" aria-label="Hrací plocha">
-      <button id="target" aria-label="Cíl"></button>
+      <div id="target" aria-hidden="true"></div>
     </div>
 
     <div id="message" aria-live="polite">Klikni na cíl. Střed terče je za 2 body, okraj za 1 bod. Kliknutí vedle odečte 2 body.</div>
@@ -152,7 +151,6 @@
     }
 
     target.addEventListener("click", (event) => {
-      event.stopPropagation();
       if (!gameRunning) return;
 
       const bounds = target.getBoundingClientRect();
