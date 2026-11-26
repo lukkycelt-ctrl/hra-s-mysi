@@ -40,19 +40,19 @@
     }
     #target {
       position: absolute;
-      width: 70px;
-      height: 70px;
+      width: 54px;
+      height: 54px;
       border: 0;
       border-radius: 50%;
       background: #ef4444;
-      box-shadow: 0 0 20px rgba(239, 68, 68, 0.8);
+      box-shadow: 0 0 16px rgba(239, 68, 68, 0.8);
       cursor: pointer;
       display: none;
     }
     #target::after {
       content: "";
       position: absolute;
-      inset: 18px;
+      inset: 14px;
       border-radius: 50%;
       background: white;
     }
@@ -159,7 +159,7 @@
       const centerX = bounds.left + bounds.width / 2;
       const centerY = bounds.top + bounds.height / 2;
       const distance = Math.hypot(event.clientX - centerX, event.clientY - centerY);
-      const hitCenter = distance <= 17;
+      const hitCenter = distance <= 13;
       const points = hitCenter ? 2 : 1;
 
       score += points;
