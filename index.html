@@ -47,6 +47,7 @@
       box-shadow: 0 0 16px rgba(239, 68, 68, 0.8);
       cursor: pointer;
       display: none;
+      transition: left 0.35s ease, top 0.35s ease;
     }
     #target::after {
       content: "";
@@ -86,7 +87,7 @@
       <div id="target" aria-hidden="true"></div>
     </div>
 
-    <div id="message" aria-live="polite">Klikni na cíl. Střed terče je za 2 body, okraj za 1 bod. Kliknutí vedle odečte 2 body.</div>
+    <div id="message" aria-live="polite">Klikni na cíl. Střed terče je za 2 body, okraj za 1 bod. Každý pátý cíl se pohybuje. Kliknutí vedle odečte 2 body.</div>
     <button id="start">Začít hrát</button>
   </main>
 
@@ -103,6 +104,8 @@
     let score = 0;
     let timeLeft = 30;
     let timer;
+    let movementTimer;
+    let hitCount = 0;
     let gameRunning = false;
     let bestScore = Number(localStorage.getItem(BEST_SCORE_KEY)) || 0;
     bestText.textContent = bestScore;
@@ -122,9 +125,15 @@
       target.style.top = Math.random() * maxY + "px";
     }
 
+    function stopTargetMovement() {
+      clearInterval(movementTimer);
+      movementTimer = undefined;
+    }
+
     function finishGame() {
       gameRunning = false;
       clearInterval(timer);
+      stopTargetMovement();
       target.style.display = "none";
       startButton.textContent = "Hrát znovu";
       startButton.style.display = "inline-block";
@@ -134,12 +143,14 @@
     function startGame() {
       score = 0;
       timeLeft = 30;
+      hitCount = 0;
       gameRunning = true;
       scoreText.textContent = score;
       timeText.textContent = timeLeft;
-      message.textContent = "Střed terče je za 2 body, okraj za 1 bod. Kliknutí vedle odečte 2 body.";
+      message.textContent = "Střed terče je za 2 body, okraj za 1 bod. Každý pátý cíl se pohybuje. Kliknutí vedle odečte 2 body.";
       startButton.style.display = "none";
       target.style.display = "block";
+      stopTargetMovement();
       moveTarget();
 
       clearInterval(timer);
@@ -153,6 +164,7 @@
     target.addEventListener("click", (event) => {
       if (!gameRunning) return;
 
+      stopTargetMovement();
       const bounds = target.getBoundingClientRect();
       const centerX = bounds.left + bounds.width / 2;
       const centerY = bounds.top + bounds.height / 2;
@@ -161,10 +173,18 @@
       const points = hitCenter ? 2 : 1;
 
       score += points;
+      hitCount++;
       scoreText.textContent = score;
-      message.textContent = hitCenter ? "Zásah do středu! +2 body" : "Zásah na okraj! +1 bod";
+      const hitMessage = hitCenter ? "Zásah do středu! +2 body" : "Zásah na okraj! +1 bod";
       updateBestScore();
       moveTarget();
+
+      if (hitCount % 5 === 4) {
+        message.textContent = hitMessage + " Další cíl se bude pohybovat!";
+        movementTimer = setInterval(moveTarget, 700);
+      } else {
+        message.textContent = hitMessage;
+      }
     });
 
     board.addEventListener("click", (event) => {
